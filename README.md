@@ -44,10 +44,12 @@ run `npm ci && npm start` with `PORT` set.
 - Land exactly on an opponent to **aggravate** them: their marble goes back to base.
 - A **6** gives you another roll.
 - Get all four marbles into your home row (exact count needed) to win.
-- **Shortcuts:** a marble that starts its turn on a gold star (the inner corners)
-  may hop star-to-star, one star per pip, up to the star just before its home.
-  From a star a **1** drops into the centre hole, and a **1** takes it back out
-  onto your home-side star.
+- **Shortcuts:** whenever a move reaches a gold star (the inner corners), whether
+  the marble starts there or passes it part-way, you may spend the rest of the
+  roll hopping star-to-star, one star per pip, up to the star just before your home.
+- **Centre:** you can't stop in the middle. From a star, exactly 2 pips left
+  cuts through the centre to the star directly opposite.
+- Shortcuts obey the no-jump rule too.
 
 Controls: click a glowing marble, then a glowing hole. Drag to rotate, scroll or
 pinch to zoom. Press Space or click the die to roll.

@@ -53,31 +53,41 @@ export function legalMoves(state, seat, roll) {
       if (roll === 1 || roll === 6) add(i, [0], 'enter');
       return;
     }
-    if (p === CENTER) {
-      if (roll === 1) add(i, [EXIT_STAR], 'leave-center');
-      return;
-    }
     // Ordinary move along the track / into the home row. No marble may be
     // jumped: any marble (yours or an opponent's) in the way blocks the move.
     if (p + roll <= LAST_HOME) {
       const path = [];
-      let blocked = false;
-      for (let k = 1; k <= roll; k++) {
-        const q = p + k;
-        if (k < roll && occupied(q)) { blocked = true; break; }
-        path.push(q);
-      }
-      if (!blocked) add(i, path, p + roll >= FIRST_HOME && p < FIRST_HOME ? 'home' : 'step');
+      for (let k = 1; k <= roll; k++) path.push(p + k);
+      if (!path.slice(0, -1).some(occupied)) add(i, path, p + roll >= FIRST_HOME && p < FIRST_HOME ? 'home' : 'step');
     }
-    // Shortcuts: a marble resting on a star hole may hop star-to-star
-    // (one star per pip, blocked by any marble on a star in between) up to its own exit star, or drop into the centre with a 1.
-    const si = STAR_PROGRESS.indexOf(p);
-    if (si !== -1) {
-      if (si + roll < STAR_PROGRESS.length) {
-        const path = STAR_PROGRESS.slice(si + 1, si + roll + 1);
-        if (!path.slice(0, -1).some(occupied)) add(i, path, 'shortcut');
+    // Shortcuts. Whenever the move reaches a star (where the marble starts, or
+    // part-way along the track), the pips left over may instead be spent:
+    //  - hopping star-to-star clockwise, one star per pip, up to the exit star;
+    //  - or, with exactly 2 left, crossing through the centre (which counts as
+    //    one hole and can't be stopped on) to the star directly opposite.
+    // The no-jump rule applies to every hole passed through, stars included.
+    const seen = new Set();
+    for (let k = 0; k < roll; k++) {
+      const q = p + k;
+      if (q > EXIT_STAR) break;
+      if (k > 0 && occupied(q)) break; // the track to this star is blocked
+      const si = STAR_PROGRESS.indexOf(q);
+      if (si === -1) continue;
+      const lead = [];
+      for (let j = 1; j <= k; j++) lead.push(p + j);
+      const left = roll - k;
+      const options = [];
+      if (si + left < STAR_PROGRESS.length) options.push([STAR_PROGRESS.slice(si + 1, si + left + 1), 'shortcut']);
+      const opposite = q + 28;
+      if (left === 2 && opposite <= EXIT_STAR) options.push([[CENTER, opposite], 'center']);
+      for (const [tail, kind] of options) {
+        const path = [...lead, ...tail];
+        const to = path[path.length - 1];
+        // Different routes to the same hole are the same move for the player.
+        if (to === p + roll || seen.has(to) || path.slice(0, -1).some(occupied)) continue;
+        seen.add(to);
+        add(i, path, kind);
       }
-      if (roll === 1) add(i, [CENTER], 'enter-center');
     }
   });
   moves.forEach((m, id) => (m.id = id));
@@ -143,11 +153,8 @@ export function chooseBotMove(state) {
     if (m.to >= FIRST_HOME && m.to <= LAST_HOME) score += 50 + m.to;
     if (m.capture) score += 40;
     if (m.kind === 'enter') score += 30;
-    if (m.kind === 'shortcut') score += 25 + 10 * m.path.length;
-    if (m.kind === 'enter-center') score += 5;
-    if (m.kind === 'leave-center') score += 35;
-    const gain = (m.to === CENTER ? 20 : m.to) - (from === BASE ? 0 : from === CENTER ? 34 : from);
-    score += gain;
+    if (m.kind === 'shortcut' || m.kind === 'center') score += 25;
+    score += m.to - (from === BASE ? 0 : from);
     score += Math.random() * 3;
     if (score > bestScore) { bestScore = score; best = m; }
   }

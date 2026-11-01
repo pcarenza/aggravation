@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newGameState, legalMoves, applyRoll, applyMove, applyPass } from '../shared/rules.js';
-import { BASE, CENTER, TRACK, HOMES, absIndex, startIndex, homeEntryIndex, isStarIndex, STAR_PROGRESS, EXIT_STAR } from '../shared/board.js';
+import { BASE, CENTER, TRACK, HOMES, absIndex, startIndex, homeEntryIndex, isStarIndex, STAR_PROGRESS } from '../shared/board.js';
 
 const game = (seats = [0, 2]) => { const s = newGameState(seats); s.turn = seats[0]; return s; };
 
@@ -77,21 +77,43 @@ test('home row needs exact count', () => {
   assert.equal(legalMoves(s, 0, 5).filter((m) => m.i === 0).length, 0, 'cannot pass own marble in home');
 });
 
-test('shortcut hops and centre', () => {
+const shortcuts = (s, roll, i = 0) => legalMoves(s, 0, roll).filter((m) => m.i === i && m.kind !== 'step');
+const at = (seat, p) => (absIndex(0, p) - startIndex(seat) + 56) % 56; // seat's progress for seat 0's hole p
+
+test('star hops from a star', () => {
   const s = game();
   s.marbles[0] = [6, BASE, BASE, BASE];
-  const hop = legalMoves(s, 0, 3).find((m) => m.kind === 'shortcut');
-  assert.deepEqual(hop.path, [20, 34, 48]);
-  assert.equal(legalMoves(s, 0, 4).filter((m) => m.kind === 'shortcut').length, 0, 'cannot hop past exit star');
-  // An opponent on an intermediate star blocks the hop, but can be captured on the last one.
-  s.marbles[2] = [(absIndex(0, 20) - startIndex(2) + 56) % 56, BASE, BASE, BASE];
-  assert.equal(legalMoves(s, 0, 2).filter((m) => m.kind === 'shortcut').length, 0, 'cannot hop over an opponent');
-  assert.deepEqual(legalMoves(s, 0, 1).find((m) => m.kind === 'shortcut').capture, { seat: 2, i: 0 });
-  s.marbles[2] = [BASE, BASE, BASE, BASE];
-  assert.ok(legalMoves(s, 0, 1).some((m) => m.to === CENTER));
-  s.marbles[0] = [CENTER, BASE, BASE, BASE];
-  assert.deepEqual(legalMoves(s, 0, 1).filter((m) => m.i === 0).map((m) => m.to), [EXIT_STAR]);
-  assert.equal(legalMoves(s, 0, 2).length, 0);
+  assert.deepEqual(legalMoves(s, 0, 3).map((m) => m.to).sort((a, b) => a - b), [9, 48], 'forward or hop');
+  assert.deepEqual(shortcuts(s, 3)[0].path, [20, 34, 48]);
+  assert.equal(shortcuts(s, 4).length, 0, 'cannot hop past exit star');
+  s.marbles[2] = [at(2, 20), BASE, BASE, BASE];
+  assert.equal(shortcuts(s, 3).length, 0, 'cannot hop over an opponent');
+  assert.deepEqual(shortcuts(s, 1)[0].capture, { seat: 2, i: 0 });
+});
+
+test('a move that reaches a star part-way may continue as a shortcut', () => {
+  const s = game();
+  s.marbles[0] = [4, BASE, BASE, BASE];
+  const m = shortcuts(s, 4); // 2 steps to the star at 6, then 2 left
+  const byTo = Object.fromEntries(m.map((x) => [x.to, x]));
+  assert.deepEqual(byTo[20]?.path, undefined, '2 left is not 1 hop');
+  assert.deepEqual(byTo[34].path, [5, 6, 20, 34], 'hop two stars');
+  assert.equal(m.length, 1, 'centre route to 34 is the same destination, offered once');
+  assert.deepEqual(legalMoves(s, 0, 3).map((m) => m.to).sort((a, b) => a - b), [7, 20]);
+  s.marbles[2] = [at(2, 5), BASE, BASE, BASE];
+  assert.equal(shortcuts(s, 4).length, 0, 'blocked on the way to the star');
+});
+
+test('centre: exactly 2 from a star crosses to the opposite star, never stops', () => {
+  const s = game();
+  s.marbles[0] = [20, BASE, BASE, BASE];
+  s.marbles[2] = [at(2, 34), BASE, BASE, BASE]; // blocks the star hop, not the centre
+  const c = legalMoves(s, 0, 2).find((m) => m.kind === 'center');
+  assert.deepEqual(c.path, [CENTER, 48]);
+  assert.ok(legalMoves(s, 0, 1).every((m) => m.to !== CENTER), 'cannot stop in the centre');
+  assert.ok(legalMoves(s, 0, 3).every((m) => m.kind !== 'center'), 'needs exactly 2');
+  s.marbles[0] = [34, BASE, BASE, BASE];
+  assert.ok(legalMoves(s, 0, 2).every((m) => m.kind !== 'center'), 'opposite star would be past home');
 });
 
 test('win when all four are home', () => {

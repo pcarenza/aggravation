@@ -16,7 +16,8 @@ export const SEATS = 4;
 //   -1        in base
 //   0..55     on the track (0 = start hole, 55 = the hole in front of home)
 //   56..59    in the home row
-//   CENTER    in the centre "super shortcut" hole
+// CENTER is never a resting place; it only appears in move paths when a
+// marble cuts through the middle from one star to the opposite star.
 export const BASE = -1;
 export const LAST_TRACK = TRACK_LEN - 1; // 55
 export const FIRST_HOME = TRACK_LEN; // 56
@@ -25,7 +26,8 @@ export const CENTER = 100;
 
 // Shortcut ("star") holes sit at the four inner corners of the cross.
 // In owner-relative progress they are at 6, 20, 34 and 48. 48 is the
-// owner's exit star, the last star before their home row.
+// owner's exit star, the last star before their home row; shortcuts never
+// go beyond it.
 export const STAR_PROGRESS = [6, 20, 34, 48];
 export const EXIT_STAR = 48;
 
