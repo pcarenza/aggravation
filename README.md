@@ -37,6 +37,33 @@ A paid instance ($7/month) stays awake.
 Any other Node host with WebSocket support works too (Railway, Fly.io, a VM):
 run `npm ci && npm start` with `PORT` set.
 
+## Android app
+
+Every push builds an APK with GitHub Actions (`.github/workflows/android.yml`)
+and publishes it as **aggravation.apk** on the
+[android-latest release](https://github.com/pcarenza/aggravation/releases/tag/android-latest).
+Direct download link to share:
+`https://github.com/pcarenza/aggravation/releases/download/android-latest/aggravation.apk`
+
+- The app is a [Capacitor](https://capacitorjs.com) wrapper: the client files
+  are bundled inside it and it plays on the hosted server
+  (`https://aggravation.onrender.com`, set `AGG_SERVER` when building to change it).
+  App players and website players share the same rooms.
+- Install: open the APK on the phone and allow installs from that app when asked.
+  New builds install over the old one.
+- Signing: add two repository secrets (Settings → Secrets and variables →
+  Actions): `ANDROID_KEYSTORE_BASE64` (the keystore file, base64-encoded) and
+  `ANDROID_KEYSTORE_PASSWORD`, key alias `aggravation`. Then every build is
+  signed with the same key and installs over the previous one. Without them the
+  workflow signs with a throwaway key, so updating means uninstalling first.
+  Never commit keystores (`*.keystore` is git-ignored).
+- Extras in the app: the screen stays on during a game, and the phone buzzes
+  when it's your turn or someone aggravates you.
+- Build locally (needs Android SDK + JDK 21): `npm run build:app`, then
+  `cd android && ./gradlew assembleRelease`.
+- Rule changes only need a server deploy. Changes to the client (`public/`,
+  `shared/`) need a new APK, which the workflow builds automatically.
+
 ## How to play
 
 - Roll a **1** or **6** to move a marble from your base onto your start hole.

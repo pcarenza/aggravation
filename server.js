@@ -16,7 +16,8 @@ app.use('/vendor/three/build', express.static(path.join(root, 'node_modules/thre
 app.use('/vendor/three/addons', express.static(path.join(root, 'node_modules/three/examples/jsm')));
 
 const http = createServer(app);
-const io = new Server(http);
+// The Android app loads the client from https://localhost and connects here.
+const io = new Server(http, { cors: { origin: ['https://localhost', 'http://localhost', 'capacitor://localhost'] } });
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();

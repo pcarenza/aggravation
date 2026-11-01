@@ -11,7 +11,17 @@ const store = {
 const board = new BoardView($('stage'));
 // The token is read on every (re)connect: a first-time visitor only receives
 // theirs after connecting, and must send it back if the connection drops.
-const socket = io({ auth: (cb) => cb({ token: store.get('token') }) });
+// In the Android app the page is served locally and AGG_SERVER names the
+// hosted game server; on the website it is unset and we use our own origin.
+const SERVER = window.AGG_SERVER || '';
+const SITE = SERVER || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`.replace(/\/$/, '');
+const socketOpts = { auth: (cb) => cb({ token: store.get('token') }) };
+const socket = SERVER ? io(SERVER, socketOpts) : io(socketOpts);
+
+// Native extras when running inside the Android app (no-ops on the web).
+const native = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins : null;
+const buzz = (style = 'MEDIUM') => { try { native?.Haptics?.impact({ style }); } catch {} };
+const keepAwake = (on) => { try { on ? native?.KeepAwake?.keepAwake() : native?.KeepAwake?.allowSleep(); } catch {} };
 if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __board: board, __socket: socket }); // for automated tests
 socket.on('token', (t) => store.set('token', t));
 
@@ -32,6 +42,7 @@ function screen(name) {
   $('toolbar').hidden = name === 'welcome';
   for (const b of document.querySelectorAll('#toolbar .game-only')) b.hidden = name !== 'game';
   inRoomScreen = name !== 'welcome';
+  keepAwake(name === 'game');
   layoutChat();
 }
 
@@ -112,11 +123,21 @@ socket.on('connect', () => {
     });
   }
 });
-socket.on('disconnect', () => toast('Connection lost — reconnecting…'));
+socket.on('disconnect', () => { toast('Connection lost — reconnecting…'); renderConnection(); });
+// The free server sleeps when idle; the first connection can take up to a minute.
+let connectFailures = 0;
+function renderConnection() {
+  const up = socket.connected;
+  $('create').disabled = $('join').disabled = !up;
+  $('conn').textContent = up ? '' : connectFailures ? 'Waking up the game server… this can take up to a minute.' : 'Connecting to the game server…';
+}
+socket.on('connect', () => { connectFailures = 0; renderConnection(); });
+socket.on('connect_error', () => { connectFailures++; renderConnection(); });
+renderConnection();
 
 // ----------------------------------------------------------------- lobby --
 $('copy-link').onclick = async () => {
-  const url = `${location.origin}${location.pathname}?room=${room.code}`;
+  const url = `${SITE}/?room=${room.code}`;
   try { await navigator.clipboard.writeText(url); toast('Invite link copied'); }
   catch { prompt('Share this link:', url); }
 };
@@ -196,6 +217,7 @@ function renderStatus(g) {
   else if (g.phase === 'pass') msg = `${label(g.turn)} rolled ${g.die} — no moves`;
   $('status').textContent = msg;
   const canRoll = mine && g.phase === 'roll';
+  if (canRoll && !board.canRoll) buzz('LIGHT'); // it just became your turn
   $('roll').disabled = !canRoll;
   board.canRoll = canRoll;
 }
@@ -358,7 +380,7 @@ function narrate(g) {
     if (l.kind === 'home') addLog(`${who(l.seat)} moved a marble home`);
     if (l.capture) {
       addLog(`${who(l.seat)} aggravated ${who(l.capture.seat)}!`);
-      if (isMine(l.capture.seat)) toast(`${nameOf(l.seat)} aggravated you!`);
+      if (isMine(l.capture.seat)) { toast(`${nameOf(l.seat)} aggravated you!`); buzz('HEAVY'); }
       else if (isMine(l.seat)) toast('Aggravated! 😈');
       else toast(`${nameOf(l.seat)} aggravated ${nameOf(l.capture.seat)}!`);
     }

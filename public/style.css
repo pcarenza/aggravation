@@ -63,7 +63,7 @@ button.small { padding: 4px 9px; font-size: 13px; }
 /* HUD */
 #hud { position: fixed; inset: 0; pointer-events: none; }
 #hud > * { pointer-events: auto; }
-#players { position: absolute; top: 12px; left: 12px; padding: 8px; display: flex; flex-direction: column; gap: 4px; min-width: 190px; }
+#players { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); padding: 8px; display: flex; flex-direction: column; gap: 4px; min-width: 190px; }
 .pl { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; border: 1px solid transparent; }
 .pl.turn { border-color: var(--accent); background: rgba(230,176,60,.14); }
 .pl .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
@@ -75,12 +75,12 @@ button.small { padding: 4px 9px; font-size: 13px; }
 #roll { min-width: 92px; font-size: 17px; }
 #roll:not(:disabled) { animation: glow 1.2s ease-in-out infinite; }
 @keyframes glow { 50% { box-shadow: 0 0 18px rgba(242,196,90,.8); } }
-#toolbar { position: fixed; right: 12px; top: 12px; display: flex; gap: 6px; z-index: 5; }
+#toolbar { position: fixed; right: calc(12px + env(safe-area-inset-right)); top: calc(12px + env(safe-area-inset-top)); display: flex; gap: 6px; z-index: 5; }
 #toolbar button { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--card); position: relative; }
 #unread { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
   background: #e0402f; color: #fff; font: bold 11px/18px system-ui, sans-serif; }
 
-#chatbox { position: fixed; right: 12px; bottom: 12px; width: 300px; height: min(380px, calc(100vh - 90px)); z-index: 4;
+#chatbox { position: fixed; right: calc(12px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); width: 300px; height: min(380px, calc(100vh - 90px)); z-index: 4;
   display: flex; flex-direction: column; padding: 8px; gap: 6px; }
 #chatbox header { display: flex; justify-content: space-between; align-items: center; padding: 0 2px 0 6px; color: var(--accent); }
 #chatbox header button { padding: 0 8px; }
@@ -95,7 +95,7 @@ button.small { padding: 4px 9px; font-size: 13px; }
 #reactions button { padding: 3px 8px; font-size: 14px; border-radius: 14px; }
 #chat-form { display: flex; gap: 6px; }
 #chat { flex: 1; padding: 7px 10px; font-size: 14px; }
-#chat-peek { position: fixed; right: 12px; top: 60px; max-width: min(300px, calc(100vw - 24px)); z-index: 6; padding: 8px 12px;
+#chat-peek { position: fixed; right: 12px; top: calc(60px + env(safe-area-inset-top)); max-width: min(300px, calc(100vw - 24px)); z-index: 6; padding: 8px 12px;
   background: var(--card); border: 1px solid var(--accent); border-radius: 12px; font-size: 14px; cursor: pointer;
   box-shadow: 0 6px 24px rgba(0,0,0,.5); animation: peek .25s ease-out; overflow-wrap: anywhere; }
 @keyframes peek { from { opacity: 0; transform: translateY(-6px); } }
@@ -111,13 +111,13 @@ kbd { background: rgba(255,255,255,.12); border-radius: 4px; padding: 0 5px; fon
 
 /* Narrow screens: chat is a sheet that opens over the board on demand. */
 @media (max-width: 900px) {
-  #chatbox { left: 8px; right: 8px; bottom: 8px; width: auto; height: min(50vh, 420px); z-index: 7; }
+  #chatbox { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); width: auto; height: min(50vh, 420px); z-index: 7; }
 }
 @media (max-width: 720px) {
-  #chat-peek { top: 52px; right: 8px; }
-  #players { min-width: 0; font-size: 13px; top: 8px; left: 8px; }
+  #chat-peek { top: calc(52px + env(safe-area-inset-top)); right: 8px; }
+  #players { min-width: 0; font-size: 13px; top: calc(8px + env(safe-area-inset-top)); left: 8px; }
   .pl { padding: 3px 6px; }
-  #toolbar { top: 8px; right: 8px; }
+  #toolbar { top: calc(8px + env(safe-area-inset-top)); right: 8px; }
   #toolbar button { width: 36px; height: 36px; }
   #status { font-size: 14px; }
   #toast { font-size: 26px; }

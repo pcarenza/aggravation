@@ -1,0 +1,89 @@
+name: Android APK
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+
+      - name: Bundle the web client and sync it into the Android project
+        run: npm run build:app
+
+      # Signing: with the ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD
+      # repository secrets every build is signed with the same key, so new builds
+      # install over old ones. Without them a throwaway key is used (the APK still
+      # installs, but updating needs the old app uninstalled first).
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          KS="$RUNNER_TEMP/release.keystore"
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$KS"
+            PASS="$KEYSTORE_PASSWORD"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD secrets not set; signing with a throwaway key, so this APK cannot update a previously installed one."
+            PASS="$(openssl rand -hex 16)"
+            echo "::add-mask::$PASS"
+            keytool -genkeypair -keystore "$KS" -storepass "$PASS" -keypass "$PASS" -alias aggravation \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Aggravation"
+          fi
+          echo "ANDROID_KEYSTORE_FILE=$KS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+
+      - name: Build the signed APK
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk ../aggravation.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aggravation-apk
+          path: aggravation.apk
+
+      - name: Publish to the "android-latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Android app (latest build)
+          make_latest: true
+          files: aggravation.apk
+          body: |
+            Latest Android build of Aggravation (build ${{ github.run_number }}, commit ${{ github.sha }}).
+
+            Download **aggravation.apk** below on your Android phone and open it to install.
+            The first time, Android asks you to allow installs from your browser or file app.
+            New builds install over the old one, keeping your name and settings.
