@@ -64,9 +64,8 @@ export function legalMoves(state, seat, roll) {
     // part-way along the track), the pips left over may instead be spent:
     //  - hopping star-to-star clockwise, one star per pip, up to the exit star;
     //  - or, with exactly 2 left, crossing through the centre (which counts as
-    //    one hole and can't be stopped on) to any of the other three stars.
-    //    Stars are owner-relative progress values, so crossing to a star the
-    //    marble has already passed sets it back to that point of its lap.
+    //    one hole and can't be stopped on) to any star further along,
+    //    up to the exit star. Shortcuts never go backwards.
     // The no-jump rule applies to every hole passed through, stars included.
     const seen = new Set();
     for (let k = 0; k < roll; k++) {
@@ -81,7 +80,7 @@ export function legalMoves(state, seat, roll) {
       const options = [];
       if (si + left < STAR_PROGRESS.length) options.push([STAR_PROGRESS.slice(si + 1, si + left + 1), 'shortcut']);
       if (left === 2) {
-        for (const star of STAR_PROGRESS) if (star !== q) options.push([[CENTER, star], 'center']);
+        for (const star of STAR_PROGRESS) if (star > q) options.push([[CENTER, star], 'center']);
       }
       for (const [tail, kind] of options) {
         const path = [...lead, ...tail];

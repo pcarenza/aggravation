@@ -25,7 +25,8 @@ export const LAST_HOME = TRACK_LEN + HOME_LEN - 1; // 59
 export const CENTER = 100;
 
 // Shortcut ("star") holes sit at the four inner corners of the cross.
-// In owner-relative progress they are at 6, 20, 34 and 48. 48 is the
+// In owner-relative progress they are at 6, 20, 34 and 48, which players
+// call the 6, 9, 12 and 3 o'clock corners (seen from their own side). 48 is the
 // owner's exit star, the last star before their home row; shortcuts never
 // go beyond it.
 export const STAR_PROGRESS = [6, 20, 34, 48];
