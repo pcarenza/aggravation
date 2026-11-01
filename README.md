@@ -23,7 +23,7 @@ the invite link from the lobby.
 ## How to play
 
 - Roll a **1** or **6** to move a marble from your base onto your start hole.
-- Move clockwise by the exact roll. You can jump other players' marbles but not your own.
+- Move clockwise by the exact roll. No jumping: if any marble is in the way, that marble can't make the move.
 - Land exactly on an opponent to **aggravate** them: their marble goes back to base.
 - A **6** gives you another roll.
 - Get all four marbles into your home row (exact count needed) to win.

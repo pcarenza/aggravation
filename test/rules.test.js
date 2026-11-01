@@ -42,7 +42,7 @@ test('no move passes the turn, six rolls again', () => {
   assert.equal(s.phase, 'roll');
 });
 
-test('cannot pass or land on own marble, can jump opponents', () => {
+test('no marble can be jumped; can land on opponents', () => {
   const s = game();
   s.marbles[0] = [0, 3, BASE, BASE];
   let m = legalMoves(s, 0, 5).filter((x) => x.i === 0);
@@ -53,7 +53,7 @@ test('cannot pass or land on own marble, can jump opponents', () => {
   s.marbles[0] = [3, BASE, BASE, BASE];
   s.marbles[2] = [(absIndex(0, 5) - startIndex(2) + 56) % 56, BASE, BASE, BASE];
   m = legalMoves(s, 0, 4);
-  assert.equal(m.length, 1, 'jumps opponent');
+  assert.equal(m.length, 0, 'cannot jump an opponent');
   m = legalMoves(s, 0, 2);
   assert.deepEqual(m[0].capture, { seat: 2, i: 0 });
   applyRoll(s, 2);
@@ -83,6 +83,11 @@ test('shortcut hops and centre', () => {
   const hop = legalMoves(s, 0, 3).find((m) => m.kind === 'shortcut');
   assert.deepEqual(hop.path, [20, 34, 48]);
   assert.equal(legalMoves(s, 0, 4).filter((m) => m.kind === 'shortcut').length, 0, 'cannot hop past exit star');
+  // An opponent on an intermediate star blocks the hop, but can be captured on the last one.
+  s.marbles[2] = [(absIndex(0, 20) - startIndex(2) + 56) % 56, BASE, BASE, BASE];
+  assert.equal(legalMoves(s, 0, 2).filter((m) => m.kind === 'shortcut').length, 0, 'cannot hop over an opponent');
+  assert.deepEqual(legalMoves(s, 0, 1).find((m) => m.kind === 'shortcut').capture, { seat: 2, i: 0 });
+  s.marbles[2] = [BASE, BASE, BASE, BASE];
   assert.ok(legalMoves(s, 0, 1).some((m) => m.to === CENTER));
   s.marbles[0] = [CENTER, BASE, BASE, BASE];
   assert.deepEqual(legalMoves(s, 0, 1).filter((m) => m.i === 0).map((m) => m.to), [EXIT_STAR]);

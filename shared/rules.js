@@ -39,7 +39,7 @@ function occupancy(state) {
 // Each move: { id, i, to, path:[progress...], kind, capture:{seat,i}|null }
 export function legalMoves(state, seat, roll) {
   const occ = occupancy(state);
-  const mine = (p) => occ.get(holeKey(seat, p))?.seat === seat;
+  const occupied = (p) => occ.has(holeKey(seat, p));
   const moves = [];
   const add = (i, path, kind) => {
     const to = path[path.length - 1];
@@ -57,25 +57,25 @@ export function legalMoves(state, seat, roll) {
       if (roll === 1) add(i, [EXIT_STAR], 'leave-center');
       return;
     }
-    // Ordinary move along the track / into the home row. You may not pass
-    // your own marbles, but you may jump over opponents.
+    // Ordinary move along the track / into the home row. No marble may be
+    // jumped: any marble (yours or an opponent's) in the way blocks the move.
     if (p + roll <= LAST_HOME) {
       const path = [];
       let blocked = false;
       for (let k = 1; k <= roll; k++) {
         const q = p + k;
-        if (k < roll && mine(q)) { blocked = true; break; }
+        if (k < roll && occupied(q)) { blocked = true; break; }
         path.push(q);
       }
       if (!blocked) add(i, path, p + roll >= FIRST_HOME && p < FIRST_HOME ? 'home' : 'step');
     }
     // Shortcuts: a marble resting on a star hole may hop star-to-star
-    // (one star per pip) up to its own exit star, or drop into the centre with a 1.
+    // (one star per pip, blocked by any marble on a star in between) up to its own exit star, or drop into the centre with a 1.
     const si = STAR_PROGRESS.indexOf(p);
     if (si !== -1) {
       if (si + roll < STAR_PROGRESS.length) {
         const path = STAR_PROGRESS.slice(si + 1, si + roll + 1);
-        if (!path.slice(0, -1).some(mine)) add(i, path, 'shortcut');
+        if (!path.slice(0, -1).some(occupied)) add(i, path, 'shortcut');
       }
       if (roll === 1) add(i, [CENTER], 'enter-center');
     }
