@@ -22,5 +22,8 @@
     "socket.io": "^4.8.4",
     "three": "^0.187.0"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
 }

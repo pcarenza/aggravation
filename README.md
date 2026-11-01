@@ -16,9 +16,26 @@ npm start          # http://localhost:3000  (set PORT to change)
 npm test           # rules engine tests
 ```
 
-To play with friends, run the server on a machine they can reach (for example
-a small cloud VM or any Node host such as Render, Railway or Fly.io) and share
-the invite link from the lobby.
+## Hosting it for friends (Render, free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pcarenza/aggravation)
+
+1. Click the button above (or in Render: **New → Blueprint** and pick this repo).
+   Sign in with GitHub and allow Render to read the repository.
+2. Click **Deploy Blueprint**. `render.yaml` sets everything up: Node 22,
+   `npm ci`, `npm start`, free plan. The first build takes a couple of minutes.
+3. Open the `https://aggravation-xxxx.onrender.com` URL Render shows you, create a
+   game, and send friends the **Copy invite link** link from the lobby.
+
+Every push to the branch redeploys automatically.
+
+Free-plan notes: the server goes to sleep after about 15 minutes with no
+visitors, and the first visit afterwards takes up to a minute to wake it.
+Games are kept in memory, so a redeploy or restart ends games in progress.
+A paid instance ($7/month) stays awake.
+
+Any other Node host with WebSocket support works too (Railway, Fly.io, a VM):
+run `npm ci && npm start` with `PORT` set.
 
 ## How to play
 

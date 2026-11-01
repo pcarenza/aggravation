@@ -9,6 +9,7 @@ import { newGameState, applyRoll, applyMove, applyPass, chooseBotMove } from './
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.get('/healthz', (_req, res) => res.send('ok'));
 app.use(express.static(path.join(root, 'public')));
 app.use('/shared', express.static(path.join(root, 'shared')));
 app.use('/vendor/three/build', express.static(path.join(root, 'node_modules/three/build')));
