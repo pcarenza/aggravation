@@ -48,7 +48,7 @@ run `npm ci && npm start` with `PORT` set.
   the marble starts there or passes it part-way, you may spend the rest of the
   roll hopping star-to-star, one star per pip, up to the star just before your home.
 - **Centre:** you can't stop in the middle. From a star, exactly 2 pips left
-  cuts through the centre to the star directly opposite.
+  cuts through the centre to any of the other three stars (your choice).
 - Shortcuts obey the no-jump rule too.
 
 Controls: click a glowing marble, then a glowing hole. Drag to rotate, scroll or

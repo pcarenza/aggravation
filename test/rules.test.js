@@ -91,29 +91,36 @@ test('star hops from a star', () => {
   assert.deepEqual(shortcuts(s, 1)[0].capture, { seat: 2, i: 0 });
 });
 
+const dests = (moves) => moves.map((m) => m.to).sort((a, b) => a - b);
+
 test('a move that reaches a star part-way may continue as a shortcut', () => {
   const s = game();
   s.marbles[0] = [4, BASE, BASE, BASE];
-  const m = shortcuts(s, 4); // 2 steps to the star at 6, then 2 left
-  const byTo = Object.fromEntries(m.map((x) => [x.to, x]));
-  assert.deepEqual(byTo[20]?.path, undefined, '2 left is not 1 hop');
-  assert.deepEqual(byTo[34].path, [5, 6, 20, 34], 'hop two stars');
-  assert.equal(m.length, 1, 'centre route to 34 is the same destination, offered once');
-  assert.deepEqual(legalMoves(s, 0, 3).map((m) => m.to).sort((a, b) => a - b), [7, 20]);
+  // Roll 4: 2 steps to the star at 6, then 2 left: hop two stars, or cross the centre.
+  const m = shortcuts(s, 4);
+  assert.deepEqual(dests(m), [20, 34, 48], 'each destination offered once');
+  assert.deepEqual(m.find((x) => x.to === 34).path, [5, 6, 20, 34], 'star hop wins the tie for 34');
+  assert.deepEqual(m.find((x) => x.to === 48).path, [5, 6, CENTER, 48]);
+  assert.deepEqual(dests(legalMoves(s, 0, 3)), [7, 20], 'forward, or 1 hop');
   s.marbles[2] = [at(2, 5), BASE, BASE, BASE];
   assert.equal(shortcuts(s, 4).length, 0, 'blocked on the way to the star');
 });
 
-test('centre: exactly 2 from a star crosses to the opposite star, never stops', () => {
+test('centre: exactly 2 from a star reaches any other star, never stops there', () => {
   const s = game();
-  s.marbles[0] = [20, BASE, BASE, BASE];
-  s.marbles[2] = [at(2, 34), BASE, BASE, BASE]; // blocks the star hop, not the centre
-  const c = legalMoves(s, 0, 2).find((m) => m.kind === 'center');
-  assert.deepEqual(c.path, [CENTER, 48]);
+  s.marbles[0] = [34, BASE, BASE, BASE];
+  const c = legalMoves(s, 0, 2).filter((m) => m.kind === 'center');
+  assert.deepEqual(dests(c), [6, 20, 48], 'all three other stars');
+  assert.deepEqual(c[0].path, [CENTER, c[0].to]);
+  assert.deepEqual(dests(legalMoves(s, 0, 2)), [6, 20, 36, 48]);
   assert.ok(legalMoves(s, 0, 1).every((m) => m.to !== CENTER), 'cannot stop in the centre');
   assert.ok(legalMoves(s, 0, 3).every((m) => m.kind !== 'center'), 'needs exactly 2');
-  s.marbles[0] = [34, BASE, BASE, BASE];
-  assert.ok(legalMoves(s, 0, 2).every((m) => m.kind !== 'center'), 'opposite star would be past home');
+  // Own marble on a target star rules out that one; an opponent there is captured.
+  s.marbles[0] = [34, 6, 59, 58];
+  s.marbles[2] = [at(2, 20), BASE, BASE, BASE];
+  const c2 = legalMoves(s, 0, 2).filter((m) => m.i === 0 && m.kind === 'center');
+  assert.deepEqual(dests(c2), [20, 48], 'own marble on 6 rules that star out');
+  assert.deepEqual(c2.find((m) => m.to === 20).capture, { seat: 2, i: 0 });
 });
 
 test('win when all four are home', () => {
