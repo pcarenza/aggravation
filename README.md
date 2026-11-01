@@ -44,16 +44,16 @@ run `npm ci && npm start` with `PORT` set.
 - Land exactly on an opponent to **aggravate** them: their marble goes back to base.
 - A **6** gives you another roll.
 - Get all four marbles into your home row (exact count needed) to win.
-- **Shortcuts:** the gold stars are the four inner corners. From your side of
-  the board call them 6, 9, 12 and 3 o'clock, in the order a marble reaches
-  them; 3 o'clock is the corner just before your home. Whenever a move reaches
-  a corner (the marble starts there or passes it part-way) you may spend the
-  rest of the roll hopping corner-to-corner clockwise, one corner per pip.
-- **Centre:** you can't stop in the middle. From a corner, exactly 2 pips left
-  cuts through the centre (counting as one space) to any corner further
-  clockwise, your choice.
-- Shortcuts only go forward, never past the 3 o'clock corner.
-- Shortcuts obey the no-jump rule too.
+- **Shortcut through the centre:** the gold stars are the four inner corners.
+  From your side of the board call them 6, 9, 12 and 3 o'clock, in the order a
+  marble reaches them; 3 o'clock is the corner just before your home. If a move
+  reaches a corner (the marble starts there or gets there part-way) with
+  exactly **2** pips left, it may go through the centre (1 pip) to any corner
+  further clockwise (the 2nd pip), your choice.
+- You can never stop in the centre, and you can't hop straight from corner to
+  corner: every shortcut goes through the centre.
+- Shortcuts only go forward, never past the 3 o'clock corner, and obey the
+  no-jump rule.
 
 Controls: click a glowing marble, then a glowing hole. Drag to rotate, scroll or
 pinch to zoom. Press Space or click the die to roll.

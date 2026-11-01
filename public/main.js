@@ -354,7 +354,6 @@ function narrate(g) {
     addLog(`${who(l.seat)} rolled <b>${l.value}</b>${l.noMoves ? ' — no moves' : ''}`);
   } else if (l.type === 'move') {
     if (l.kind === 'enter') addLog(`${who(l.seat)} brought a marble out`);
-    if (l.kind === 'shortcut') addLog(`${who(l.seat)} took a shortcut!`);
     if (l.kind === 'center') addLog(`${who(l.seat)} cut across the centre!`);
     if (l.kind === 'home') addLog(`${who(l.seat)} moved a marble home`);
     if (l.capture) {

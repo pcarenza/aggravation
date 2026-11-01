@@ -60,35 +60,18 @@ export function legalMoves(state, seat, roll) {
       for (let k = 1; k <= roll; k++) path.push(p + k);
       if (!path.slice(0, -1).some(occupied)) add(i, path, p + roll >= FIRST_HOME && p < FIRST_HOME ? 'home' : 'step');
     }
-    // Shortcuts. Whenever the move reaches a star (where the marble starts, or
-    // part-way along the track), the pips left over may instead be spent:
-    //  - hopping star-to-star clockwise, one star per pip, up to the exit star;
-    //  - or, with exactly 2 left, crossing through the centre (which counts as
-    //    one hole and can't be stopped on) to any star further along,
-    //    up to the exit star. Shortcuts never go backwards.
-    // The no-jump rule applies to every hole passed through, stars included.
-    const seen = new Set();
-    for (let k = 0; k < roll; k++) {
-      const q = p + k;
-      if (q > EXIT_STAR) break;
-      if (k > 0 && occupied(q)) break; // the track to this star is blocked
-      const si = STAR_PROGRESS.indexOf(q);
-      if (si === -1) continue;
+    // Shortcut through the centre. If the move reaches a corner star (the
+    // marble starts on it, or gets there part-way along the track) with
+    // exactly 2 pips left, it may cut through the centre (one pip; never a
+    // stopping place) to any corner further clockwise (the second pip), up to
+    // the player's exit corner. Corner-to-corner moves must go through the
+    // centre, and the no-jump rule applies to every hole on the way.
+    const q = p + roll - 2; // the corner the marble would leave the track at
+    if (roll >= 2 && STAR_PROGRESS.includes(q) && q < EXIT_STAR) {
       const lead = [];
-      for (let j = 1; j <= k; j++) lead.push(p + j);
-      const left = roll - k;
-      const options = [];
-      if (si + left < STAR_PROGRESS.length) options.push([STAR_PROGRESS.slice(si + 1, si + left + 1), 'shortcut']);
-      if (left === 2) {
-        for (const star of STAR_PROGRESS) if (star > q) options.push([[CENTER, star], 'center']);
-      }
-      for (const [tail, kind] of options) {
-        const path = [...lead, ...tail];
-        const to = path[path.length - 1];
-        // Different routes to the same hole are the same move for the player.
-        if (to === p + roll || seen.has(to) || path.slice(0, -1).some(occupied)) continue;
-        seen.add(to);
-        add(i, path, kind);
+      for (let k = p + 1; k <= q; k++) lead.push(k);
+      if (!lead.some(occupied) && !occupied(CENTER)) {
+        for (const star of STAR_PROGRESS) if (star > q) add(i, [...lead, CENTER, star], 'center');
       }
     }
   });
@@ -156,7 +139,7 @@ export function chooseBotMove(state) {
     if (m.capture) score += 40;
     if (m.kind === 'enter') score += 30;
     const gain = m.to - (from === BASE ? 0 : from);
-    if ((m.kind === 'shortcut' || m.kind === 'center') && gain > 0) score += 25;
+    if (m.kind === 'center' && gain > 0) score += 25;
     score += gain;
     score += Math.random() * 3;
     if (score > bestScore) { bestScore = score; best = m; }

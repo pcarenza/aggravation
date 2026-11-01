@@ -77,62 +77,55 @@ test('home row needs exact count', () => {
   assert.equal(legalMoves(s, 0, 5).filter((m) => m.i === 0).length, 0, 'cannot pass own marble in home');
 });
 
-const shortcuts = (s, roll, i = 0) => legalMoves(s, 0, roll).filter((m) => m.i === i && m.kind !== 'step');
 const at = (seat, p) => (absIndex(0, p) - startIndex(seat) + 56) % 56; // seat's progress for seat 0's hole p
-
-test('star hops from a star', () => {
-  const s = game();
-  s.marbles[0] = [6, BASE, BASE, BASE];
-  assert.deepEqual(legalMoves(s, 0, 3).map((m) => m.to).sort((a, b) => a - b), [9, 48], 'forward or hop');
-  assert.deepEqual(shortcuts(s, 3)[0].path, [20, 34, 48]);
-  assert.equal(shortcuts(s, 4).length, 0, 'cannot hop past exit star');
-  s.marbles[2] = [at(2, 20), BASE, BASE, BASE];
-  assert.equal(shortcuts(s, 3).length, 0, 'cannot hop over an opponent');
-  assert.deepEqual(shortcuts(s, 1)[0].capture, { seat: 2, i: 0 });
-});
-
 const dests = (moves) => moves.map((m) => m.to).sort((a, b) => a - b);
+const centre = (s, roll, i = 0) => legalMoves(s, 0, roll).filter((m) => m.i === i && m.kind === 'center');
+// Corners in owner progress: 6 = "6 o'clock", 20 = 9, 34 = 12, 48 = 3 (before home).
 
-test('a move that reaches a star part-way may continue as a shortcut', () => {
-  const s = game();
-  s.marbles[0] = [4, BASE, BASE, BASE];
-  // Roll 4: 2 steps to the star at 6, then 2 left: hop two stars, or cross the centre.
-  const m = shortcuts(s, 4);
-  assert.deepEqual(dests(m), [20, 34, 48], 'each destination offered once');
-  assert.deepEqual(m.find((x) => x.to === 34).path, [5, 6, 20, 34], 'star hop wins the tie for 34');
-  assert.deepEqual(m.find((x) => x.to === 48).path, [5, 6, CENTER, 48]);
-  assert.deepEqual(dests(legalMoves(s, 0, 3)), [7, 20], 'forward, or 1 hop');
-  s.marbles[2] = [at(2, 5), BASE, BASE, BASE];
-  assert.equal(shortcuts(s, 4).length, 0, 'blocked on the way to the star');
-});
-
-test('centre: exactly 2 from a corner reaches any corner further clockwise, never stops', () => {
-  // Corners in owner progress: 6 = "6 o'clock", 20 = 9, 34 = 12, 48 = 3 (before home).
+test('no hopping straight from corner to corner', () => {
   const s = game();
   s.marbles[0] = [6, BASE, BASE, BASE];
-  assert.deepEqual(dests(legalMoves(s, 0, 2).filter((m) => m.kind !== 'step')), [20, 34, 48], 'from 6: 9, 12 or 3');
-  s.marbles[0] = [20, BASE, BASE, BASE];
-  assert.deepEqual(dests(legalMoves(s, 0, 2).filter((m) => m.kind !== 'step')), [34, 48], 'from 9: 12 or 3');
-  s.marbles[0] = [34, BASE, BASE, BASE];
-  assert.deepEqual(dests(legalMoves(s, 0, 2)), [36, 48], 'from 12: forward or 3, never back');
-  assert.deepEqual(legalMoves(s, 0, 2).find((m) => m.to === 48).path, [CENTER, 48]);
-  s.marbles[0] = [48, BASE, BASE, BASE];
-  assert.deepEqual(dests(legalMoves(s, 0, 2)), [50], 'no shortcut from the 3 o\'clock corner');
-  s.marbles[0] = [34, BASE, BASE, BASE];
-  assert.ok(legalMoves(s, 0, 1).every((m) => m.to !== CENTER), 'cannot stop in the centre');
-  assert.ok(legalMoves(s, 0, 3).every((m) => m.kind !== 'center'), 'needs exactly 2');
-  // Own marble on a corner rules it out; an opponent there is captured.
-  s.marbles[0] = [6, 20, 59, 58];
-  s.marbles[2] = [at(2, 48), BASE, BASE, BASE];
-  const c = legalMoves(s, 0, 2).filter((m) => m.i === 0 && m.kind === 'center');
-  assert.deepEqual(dests(c), [34, 48], 'centre route passes the blocked 9 o\'clock corner');
-  assert.deepEqual(c.find((m) => m.to === 48).capture, { seat: 2, i: 0 });
+  for (const r of [1, 3, 4, 5]) {
+    assert.deepEqual(dests(legalMoves(s, 0, r).filter((m) => m.i === 0)), [6 + r], `roll ${r}: only the normal move`);
+  }
 });
 
-test('one space before a corner, a 3 gives the centre choices', () => {
+test('centre: exactly 2 from a corner reaches any corner further clockwise', () => {
+  const s = game();
+  s.marbles[0] = [6, BASE, BASE, BASE];
+  assert.deepEqual(dests(legalMoves(s, 0, 2)), [8, 20, 34, 48], 'from 6: forward, or 9, 12, 3');
+  assert.deepEqual(centre(s, 2).find((m) => m.to === 34).path, [CENTER, 34], 'always through the centre');
+  s.marbles[0] = [20, BASE, BASE, BASE];
+  assert.deepEqual(dests(centre(s, 2)), [34, 48], 'from 9: 12 or 3');
+  s.marbles[0] = [34, BASE, BASE, BASE];
+  assert.deepEqual(dests(centre(s, 2)), [48], 'from 12: 3 only, never back');
+  s.marbles[0] = [48, BASE, BASE, BASE];
+  assert.deepEqual(dests(legalMoves(s, 0, 2)), [50], "no shortcut from the 3 o'clock corner");
+  s.marbles[0] = [20, BASE, BASE, BASE];
+  assert.ok(legalMoves(s, 0, 1).every((m) => m.to !== CENTER), 'cannot stop in the centre');
+});
+
+test('reaching a corner part-way with exactly 2 left', () => {
   const s = game();
   s.marbles[0] = [5, BASE, BASE, BASE];
-  assert.deepEqual(dests(legalMoves(s, 0, 3)), [8, 20, 34, 48]);
+  assert.deepEqual(dests(legalMoves(s, 0, 3)), [8, 20, 34, 48], 'one before a corner, roll 3');
+  assert.deepEqual(centre(s, 3).find((m) => m.to === 20).path, [6, CENTER, 20]);
+  s.marbles[0] = [2, BASE, BASE, BASE];
+  assert.deepEqual(dests(centre(s, 6)), [20, 34, 48], 'four before a corner, roll 6');
+  assert.deepEqual(dests(centre(s, 5)), [], '3 left at the corner is not a shortcut');
+  s.marbles[2] = [at(2, 6), BASE, BASE, BASE];
+  assert.deepEqual(dests(centre(s, 6)), [], 'a marble on the corner blocks the way in');
+  s.marbles[2] = [at(2, 4), BASE, BASE, BASE];
+  assert.deepEqual(dests(centre(s, 6)), [], 'a marble before the corner blocks it too');
+});
+
+test('centre landing: own marble rules a corner out, an opponent is captured', () => {
+  const s = game();
+  s.marbles[0] = [6, 20, 59, 58];
+  s.marbles[2] = [at(2, 48), BASE, BASE, BASE];
+  const c = centre(s, 2);
+  assert.deepEqual(dests(c), [34, 48], "own marble on 9 o'clock rules it out (and is not jumped: the route is via the centre)");
+  assert.deepEqual(c.find((m) => m.to === 48).capture, { seat: 2, i: 0 });
 });
 
 test('win when all four are home', () => {
