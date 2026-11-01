@@ -9,8 +9,10 @@ const store = {
 };
 
 const board = new BoardView($('stage'));
-if (new URLSearchParams(location.search).has('debug')) window.__board = board; // for automated tests
-const socket = io({ auth: { token: store.get('token') } });
+// The token is read on every (re)connect: a first-time visitor only receives
+// theirs after connecting, and must send it back if the connection drops.
+const socket = io({ auth: (cb) => cb({ token: store.get('token') }) });
+if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __board: board, __socket: socket }); // for automated tests
 socket.on('token', (t) => store.set('token', t));
 
 let room = null; // latest room state from the server
