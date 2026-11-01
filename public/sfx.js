@@ -54,6 +54,22 @@ export const sfx = {
       o.stop(t + 0.7);
     });
   },
+  // Soft blip for an incoming chat message.
+  pop: () => {
+    const a = !muted && ac();
+    if (!a) return;
+    const o = a.createOscillator();
+    const g = a.createGain();
+    const t = a.currentTime;
+    o.frequency.setValueAtTime(880, t);
+    o.frequency.exponentialRampToValueAtTime(1320, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.08, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g).connect(a.destination);
+    o.start(t);
+    o.stop(t + 0.2);
+  },
   unlock: () => ac(),
   get muted() { return muted; },
   set muted(v) { muted = v; try { localStorage.setItem('muted', v ? '1' : '0'); } catch {} },

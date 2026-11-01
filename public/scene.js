@@ -342,9 +342,9 @@ export class BoardView {
   }
 
   #table() {
-    const tex = canvasTexture(woodCanvas(512, { light: [92, 54, 32], dark: [42, 22, 12], seed: 7, ringScale: 30, warp: 3 }), { repeat: 5 });
+    const tex = canvasTexture(woodCanvas(512, { light: [92, 54, 32], dark: [42, 22, 12], seed: 7, ringScale: 30, warp: 3 }), { repeat: 17 });
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.62, metalness: 0 });
-    const table = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), mat);
+    const table = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), mat);
     table.rotation.x = -Math.PI / 2;
     table.receiveShadow = true;
     this.scene.add(table);
@@ -490,16 +490,37 @@ export class BoardView {
   resize() {
     const w = this.container.clientWidth, h = this.container.clientHeight;
     this.renderer.setSize(w, h);
-    this.camera.aspect = w / h;
-    // Widen the view on narrow screens so the whole board fits.
-    this.camera.fov = w / h < 1 ? Math.min(70, 38 / Math.max(w / h, 0.55)) : 38;
+    // When a panel is docked on the right (chat), frame the scene in the space
+    // left of it; the canvas still covers the full width so the table shows
+    // underneath the panel.
+    const inset = Math.min(this.rightInset || 0, w * 0.5);
+    const we = w - inset;
+    const aspect = we / h;
+    this.camera.aspect = aspect;
+    if (aspect < 1) {
+      // Widen the view on narrow screens so the whole board fits.
+      this.camera.fov = Math.min(70, 38 / Math.max(aspect, 0.55));
+    } else {
+      // Keep the board and dice tray in frame as the view gets narrower.
+      const k = Math.max(1, 1.5 / aspect);
+      this.camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(19)) * k));
+    }
+    if (inset) this.camera.setViewOffset(we, h, 0, 0, w, h);
+    else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     // On tall screens the dice tray goes in front of the board instead of beside it.
-    const portrait = w / h < 0.9;
+    const portrait = aspect < 0.9;
     if (portrait !== this.portrait) {
       this.portrait = portrait;
       if (this.tray) this.setViewSeat(this.viewSeat, false);
     }
+  }
+
+  // Reserve `px` on the right edge of the screen for an overlay panel.
+  setRightInset(px) {
+    if ((this.rightInset || 0) === px) return;
+    this.rightInset = px;
+    this.resize();
   }
 
   // Rotate the view so `seat`'s arm is nearest the viewer.

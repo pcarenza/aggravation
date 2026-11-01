@@ -75,13 +75,30 @@ button.small { padding: 4px 9px; font-size: 13px; }
 #roll { min-width: 92px; font-size: 17px; }
 #roll:not(:disabled) { animation: glow 1.2s ease-in-out infinite; }
 @keyframes glow { 50% { box-shadow: 0 0 18px rgba(242,196,90,.8); } }
-#side { position: absolute; right: 12px; top: 64px; width: 260px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-#log { max-height: 230px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 2px; }
-#log .sys { color: var(--muted); font-style: italic; }
-#log b { color: var(--accent); font-weight: normal; }
-#chat { width: 100%; padding: 7px 10px; font-size: 13px; }
-#toolbar { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
-#toolbar button { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--card); }
+#toolbar { position: fixed; right: 12px; top: 12px; display: flex; gap: 6px; z-index: 5; }
+#toolbar button { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--card); position: relative; }
+#unread { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: #e0402f; color: #fff; font: bold 11px/18px system-ui, sans-serif; }
+
+#chatbox { position: fixed; right: 12px; bottom: 12px; width: 300px; height: min(380px, calc(100vh - 90px)); z-index: 4;
+  display: flex; flex-direction: column; padding: 8px; gap: 6px; }
+#chatbox header { display: flex; justify-content: space-between; align-items: center; padding: 0 2px 0 6px; color: var(--accent); }
+#chatbox header button { padding: 0 8px; }
+#log { flex: 1; min-height: 0; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 3px; padding: 0 4px; overflow-wrap: anywhere; }
+#log .ev { color: var(--muted); font-size: 12px; }
+#log .sys { color: var(--muted); font-style: italic; font-size: 12px; }
+#log .msg b { color: var(--text); }
+#log .msg.mine { color: #f8e3b4; }
+#log .mini { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 4px;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), transparent 40%), var(--c, #888); }
+#reactions { display: flex; gap: 4px; flex-wrap: wrap; }
+#reactions button { padding: 3px 8px; font-size: 14px; border-radius: 14px; }
+#chat-form { display: flex; gap: 6px; }
+#chat { flex: 1; padding: 7px 10px; font-size: 14px; }
+#chat-peek { position: fixed; right: 12px; top: 60px; max-width: min(300px, calc(100vw - 24px)); z-index: 6; padding: 8px 12px;
+  background: var(--card); border: 1px solid var(--accent); border-radius: 12px; font-size: 14px; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(0,0,0,.5); animation: peek .25s ease-out; overflow-wrap: anywhere; }
+@keyframes peek { from { opacity: 0; transform: translateY(-6px); } }
 
 #toast { position: fixed; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(.9); font-size: 34px; font-weight: bold;
   color: #fff; text-shadow: 0 3px 12px #000, 0 0 2px #000; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; text-align: center; padding: 0 16px; }
@@ -92,8 +109,12 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 dialog ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 kbd { background: rgba(255,255,255,.12); border-radius: 4px; padding: 0 5px; font-size: 12px; }
 
+/* Narrow screens: chat is a sheet that opens over the board on demand. */
+@media (max-width: 900px) {
+  #chatbox { left: 8px; right: 8px; bottom: 8px; width: auto; height: min(50vh, 420px); z-index: 7; }
+}
 @media (max-width: 720px) {
-  #side { display: none; }
+  #chat-peek { top: 52px; right: 8px; }
   #players { min-width: 0; font-size: 13px; top: 8px; left: 8px; }
   .pl { padding: 3px 6px; }
   #toolbar { top: 8px; right: 8px; }

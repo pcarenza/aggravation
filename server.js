@@ -46,6 +46,7 @@ class Room {
     this.game = null;
     this.timer = null;
     this.chat = [];
+    this.chatId = 0;
     this.touched = Date.now();
   }
 
@@ -65,7 +66,6 @@ class Room {
       spectators: [...this.players.values()].filter((p) => p.connected && this.seatOf(p.token) === -1).map((p) => p.name),
       hostName: this.players.get(this.host)?.name ?? null,
       game: this.game,
-      chat: this.chat.slice(-30),
     };
   }
 
@@ -108,9 +108,13 @@ class Room {
     this.schedule();
   }
 
-  addChat(name, text, system = false) {
-    this.chat.push({ name, text: String(text).slice(0, 200), system, t: Date.now() });
+  // Chat goes out immediately on its own event, separate from game state, so
+  // it is never held up behind dice and marble animations.
+  addChat(name, text, system = false, seat = -1) {
+    const msg = { id: ++this.chatId, name, seat, text: String(text).slice(0, 200), system, t: Date.now() };
+    this.chat.push(msg);
     if (this.chat.length > 100) this.chat.shift();
+    io.to(this.code).emit('chat', msg);
   }
 }
 
@@ -137,6 +141,7 @@ io.on('connection', (socket) => {
       r.players.set(token, { token, name, socketId: socket.id, connected: true });
       r.addChat(null, `${name} joined`, true);
     }
+    socket.emit('chatHistory', { code: r.code, messages: r.chat.slice(-50) });
     const seat = r.seatOf(token);
     if (seat !== -1) r.seats[seat].name = r.players.get(token).name;
     if (!r.host || !r.players.get(r.host)?.connected) r.host = token;
@@ -259,10 +264,17 @@ io.on('connection', (socket) => {
     ok(ack);
   });
 
-  socket.on('chat', ({ text } = {}) => {
-    if (!room || !String(text ?? '').trim()) return;
-    room.addChat(room.players.get(token)?.name ?? '?', String(text).trim());
-    room.broadcast();
+  // At most 5 messages per 5 seconds per connection.
+  const chatTimes = [];
+  socket.on('chat', ({ text } = {}, ack) => {
+    const clean = String(text ?? '').replace(/\s+/g, ' ').trim();
+    if (!room || !clean) return fail(ack, 'Nothing to send.');
+    const now = Date.now();
+    while (chatTimes.length && now - chatTimes[0] > 5000) chatTimes.shift();
+    if (chatTimes.length >= 5) return fail(ack, 'Slow down a little!');
+    chatTimes.push(now);
+    room.addChat(room.players.get(token)?.name ?? '?', clean, false, room.seatOf(token));
+    ok(ack);
   });
 
   socket.on('leave', (_, ack) => { leave(); ok(ack); });

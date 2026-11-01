@@ -22,12 +22,17 @@ let gameoverDismissed = false;
 const queue = [];
 let busy = false;
 let wantRoom = false; // true while we are (trying to be) in a room
+let inRoomScreen = false;
 
 // --------------------------------------------------------------- screens --
 function screen(name) {
   $('welcome').hidden = name !== 'welcome';
   $('lobby').hidden = name !== 'lobby';
   $('hud').hidden = name !== 'game';
+  $('toolbar').hidden = name === 'welcome';
+  for (const b of document.querySelectorAll('#toolbar .game-only')) b.hidden = name !== 'game';
+  inRoomScreen = name !== 'welcome';
+  layoutChat();
 }
 
 $('name').value = store.get('name') || '';
@@ -90,6 +95,7 @@ function leave() {
   board.clearMoves();
   board.setMarbles(null);
   $('gameover').hidden = true;
+  clearChat();
   screen('welcome');
 }
 $('leave').onclick = leave;
@@ -194,32 +200,123 @@ function renderStatus(g) {
   board.canRoll = canRoll;
 }
 
-function addLog(html, sys = false) {
-  const div = document.createElement('div');
-  if (sys) div.className = 'sys';
-  div.innerHTML = html;
-  const log = $('log');
-  log.append(div);
-  while (log.children.length > 80) log.firstChild.remove();
-  log.scrollTop = log.scrollHeight;
-}
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const who = (seat) => `<span class="dot" style="--c:${SEAT_COLORS[seat].hex};display:inline-block;width:10px;height:10px;vertical-align:middle"></span> ${esc(label(seat))}`;
+// ------------------------------------------------------------------ chat --
+// One feed holds chat messages, join/leave notices and game events.
+const chatState = { code: null, lastId: 0, unread: 0, open: false, peekTimer: null };
+const compact = window.matchMedia('(max-width: 900px)');
+try { chatState.open = store.get('chatOpen') !== '0' && !compact.matches; } catch {}
 
-let lastChatT = 0;
-function renderChat() {
-  for (const c of room.chat) {
-    if (c.t <= lastChatT) continue;
-    lastChatT = c.t;
-    addLog(c.system ? esc(c.text) : `<b>${esc(c.name)}:</b> ${esc(c.text)}`, c.system);
+function addLine(node) {
+  const log = $('log');
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  log.append(node);
+  while (log.children.length > 150) log.firstChild.remove();
+  if (atBottom || node.classList.contains('mine')) log.scrollTop = log.scrollHeight;
+}
+
+function addLog(html) {
+  const div = document.createElement('div');
+  div.className = 'ev';
+  div.innerHTML = html;
+  addLine(div);
+}
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const who = (seat) => `<span class="mini" style="--c:${SEAT_COLORS[seat].hex}"></span>${esc(label(seat))}`;
+
+function addChatMessage(m, live) {
+  if (m.id <= chatState.lastId) return;
+  chatState.lastId = m.id;
+  const div = document.createElement('div');
+  if (m.system) {
+    div.className = 'sys';
+    div.textContent = m.text;
+    addLine(div);
+    return;
   }
+  const mine = room && m.seat !== -1 ? m.seat === room.you.seat && m.name === room.you.name : m.name === store.get('name');
+  div.className = 'msg' + (mine ? ' mine' : '');
+  const dot = document.createElement('span');
+  dot.className = 'mini';
+  if (m.seat >= 0) dot.style.setProperty('--c', SEAT_COLORS[m.seat].hex);
+  const name = document.createElement('b');
+  name.textContent = `${m.name}: `;
+  div.append(dot, name, document.createTextNode(m.text));
+  addLine(div);
+  if (live && !mine) notifyChat(m);
+}
+
+function notifyChat(m) {
+  if (chatState.open && !document.hidden) return;
+  chatState.unread++;
+  renderUnread();
+  sfx.pop();
+  const peek = $('chat-peek');
+  peek.textContent = `${m.name}: ${m.text}`;
+  peek.hidden = false;
+  clearTimeout(chatState.peekTimer);
+  chatState.peekTimer = setTimeout(() => (peek.hidden = true), 4500);
+}
+
+function renderUnread() {
+  const u = $('unread');
+  u.hidden = !chatState.unread;
+  u.textContent = chatState.unread > 9 ? '9+' : chatState.unread;
+}
+
+function setChatOpen(open) {
+  chatState.open = open;
+  if (!compact.matches) store.set('chatOpen', open ? '1' : '0');
+  if (open) { chatState.unread = 0; renderUnread(); $('chat-peek').hidden = true; }
+  layoutChat();
+  if (open) $('log').scrollTop = $('log').scrollHeight;
+}
+
+function layoutChat() {
+  const show = inRoomScreen && chatState.open;
+  $('chatbox').hidden = !show;
+  // On wide screens the chat is docked at the right; keep the board clear of it.
+  board.setRightInset(show && !compact.matches ? $('chatbox').offsetWidth + 24 : 0);
+}
+
+function clearChat() {
+  $('log').replaceChildren();
+  chatState.lastId = 0;
+  chatState.unread = 0;
+  chatState.code = null;
+  renderUnread();
+  $('chat-peek').hidden = true;
+}
+
+socket.on('chatHistory', ({ code, messages }) => {
+  if (!wantRoom) return;
+  if (code !== chatState.code) { clearChat(); chatState.code = code; }
+  for (const m of messages) addChatMessage(m, false);
+});
+socket.on('chat', (m) => { if (wantRoom) addChatMessage(m, true); });
+
+function sendChat(text) {
+  text = text.trim();
+  if (!text) return;
+  emit('chat', { text });
 }
 $('chat-form').onsubmit = (e) => {
   e.preventDefault();
-  const text = $('chat').value.trim();
-  if (text) socket.emit('chat', { text });
+  sendChat($('chat').value);
   $('chat').value = '';
 };
+for (const r of ['😈', '😂', '😱', '👍', 'Nooo!', 'GG']) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = r;
+  b.onclick = () => sendChat(r);
+  $('reactions').append(b);
+}
+$('btn-chat').onclick = () => setChatOpen(!chatState.open);
+$('chat-close').onclick = () => setChatOpen(false);
+$('chat-peek').onclick = () => setChatOpen(true);
+$('chat').addEventListener('keydown', (e) => { if (e.key === 'Escape') e.target.blur(); });
+compact.addEventListener('change', () => { if (compact.matches) setChatOpen(false); else layoutChat(); });
 
 let toastTimer;
 function toast(text, ms = 1600) {
@@ -243,6 +340,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && document.activeElement?.tagName !== 'INPUT') { e.preventDefault(); roll(); }
 });
 
+for (const b of document.querySelectorAll('[data-open]')) b.onclick = () => $(b.dataset.open).showModal();
 $('btn-view').onclick = () => board.setViewSeat(Math.max(0, room?.you.seat ?? 0));
 const soundIcon = () => ($('btn-sound').textContent = sfx.muted ? '🔇' : '🔊');
 soundIcon();
@@ -272,7 +370,6 @@ function narrate(g) {
 async function present(next) {
   const g = next.game;
   room = next;
-  renderChat();
 
   if (!g) {
     shown = null;

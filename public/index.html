@@ -55,17 +55,24 @@
       <div id="status">…</div>
       <button id="roll" class="primary" disabled>Roll</button>
     </div>
-    <div id="side" class="card">
-      <div id="log"></div>
-      <form id="chat-form"><input id="chat" maxlength="200" placeholder="Say something…" autocomplete="off" /></form>
-    </div>
-    <div id="toolbar">
-      <button id="btn-view" title="Reset camera">⟲</button>
-      <button id="btn-sound" title="Sound on/off">🔊</button>
-      <button data-open="rules" title="Rules">?</button>
-      <button id="btn-quit" title="Leave game">✕</button>
-    </div>
   </div>
+
+  <div id="toolbar" hidden>
+    <button id="btn-chat" title="Chat">💬<span id="unread" hidden></span></button>
+    <button id="btn-view" class="game-only" title="Reset camera">⟲</button>
+    <button id="btn-sound" title="Sound on/off">🔊</button>
+    <button data-open="rules" title="Rules">?</button>
+    <button id="btn-quit" class="game-only" title="Leave game">✕</button>
+  </div>
+
+  <!-- Chat (lobby and game) -->
+  <aside id="chatbox" class="card" hidden aria-label="Chat">
+    <header><span>Chat</span><button id="chat-close" class="small ghost" title="Hide chat">—</button></header>
+    <div id="log" aria-live="polite"></div>
+    <div id="reactions"></div>
+    <form id="chat-form"><input id="chat" maxlength="200" placeholder="Say something…" autocomplete="off" enterkeyhint="send" /><button class="small primary">Send</button></form>
+  </aside>
+  <div id="chat-peek" hidden></div>
 
   <div id="toast"></div>
 
