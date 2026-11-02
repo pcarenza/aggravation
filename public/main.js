@@ -16,6 +16,9 @@ const board = new BoardView($('stage'));
 const SERVER = window.AGG_SERVER || '';
 const SITE = SERVER || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`.replace(/\/$/, '');
 const socketOpts = { auth: (cb) => cb({ token: store.get('token') }) };
+// The app connects cross-origin: start with a WebSocket (not subject to CORS)
+// and only fall back to long-polling, which needs the server's CORS setting.
+if (SERVER) socketOpts.transports = ['websocket', 'polling'];
 const socket = SERVER ? io(SERVER, socketOpts) : io(socketOpts);
 
 // Native extras when running inside the Android app (no-ops on the web).
@@ -129,7 +132,10 @@ let connectFailures = 0;
 function renderConnection() {
   const up = socket.connected;
   $('create').disabled = $('join').disabled = !up;
-  $('conn').textContent = up ? '' : connectFailures ? 'Waking up the game server… this can take up to a minute.' : 'Connecting to the game server…';
+  $('conn').textContent = up ? ''
+    : connectFailures > 12 ? "Can't reach the game server. Check your internet connection; still retrying…"
+    : connectFailures ? 'Waking up the game server… this can take up to a minute.'
+    : 'Connecting to the game server…';
 }
 socket.on('connect', () => { connectFailures = 0; renderConnection(); });
 socket.on('connect_error', () => { connectFailures++; renderConnection(); });
